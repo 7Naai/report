@@ -10,6 +10,8 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - DATABASE_USERNAME=${DATABASE_USERNAME}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka1:9092,kafka2:9092
+      - JAVA_TOOL_OPTIONS=-Djava.net.preferIPv4Stack=true
     networks:
       - red-compartida
 
