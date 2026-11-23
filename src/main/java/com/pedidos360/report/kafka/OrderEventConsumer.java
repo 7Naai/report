@@ -9,6 +9,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Component
 public class OrderEventConsumer {
@@ -24,7 +25,7 @@ public class OrderEventConsumer {
     }
 
     @KafkaListener(
-            topics = "orders.events",
+            topics = "orders.audit.v1",
             groupId = "report-service-group"
     )
     public void consumeOrderEvent(String message) {
@@ -35,40 +36,44 @@ public class OrderEventConsumer {
 
             AuditEvent event = new AuditEvent();
 
-            event.setEventId(
-                    getText(json, "eventId")
-            );
+            String eventId = getText(json, "eventId");
+            event.setEventId(eventId != null ? eventId : UUID.randomUUID().toString());
 
-            event.setEventType(
-                    getText(json, "type")
-            );
+            String status = getText(json, "status");
+            String type = getText(json, "type");
+            event.setEventType(type != null ? type : (status != null ? "ORDER_" + status : "ORDER_EVENT"));
 
-            event.setOrderId(
-                    getText(json, "orderId")
-            );
+            String orderId = getText(json, "id");
+            event.setOrderId(orderId != null ? orderId : getText(json, "orderId"));
 
-            event.setActor(
-                    getText(json, "actor")
-            );
+            String actor = getText(json, "userId");
+            if (actor == null) {
+                actor = getText(json, "customerId");
+            }
+            if (actor == null) {
+                actor = getText(json, "actor");
+            }
+            event.setActor(actor);
 
             event.setDetails(message);
 
-            String timestamp =
-                    getText(json, "timestamp");
+            String timestamp = getText(json, "createdAt");
+            if (timestamp == null) {
+                timestamp = getText(json, "timestamp");
+            }
 
             if (timestamp != null && !timestamp.isBlank()) {
-
                 event.setTimestamp(
                         LocalDateTime.parse(timestamp)
                 );
             } else {
-
                 event.setTimestamp(
                         LocalDateTime.now()
                 );
             }
 
             auditEventRepository.save(event);
+            System.out.println("Evento guardado en report para Order ID: " + event.getOrderId());
 
         } catch (Exception e) {
 
